@@ -1,382 +1,21 @@
 #ifndef SJTU_DEQUE_HPP
 #define SJTU_DEQUE_HPP
 
+#include "double_list.hpp"
 #include "exceptions.hpp"
 
 #include <cstddef>
 #include <iterator>
 
 namespace sjtu {
-template <class T> class double_list {
-private:
-  struct node {
-    T val;
-    node *prev;
-    node *next;
-    node(const T &val, node *prev = nullptr, node *next = nullptr)
-        : val(val), prev(prev), next(next) {}
-  };
-
-public:
-  int size;
-  node *head;
-  node *tail;
-  double_list() : size(0), head(nullptr), tail(nullptr) {}
-  double_list(int size, node *head, node *tail)
-      : size(size), head(head), tail(tail) {}
-  // 深拷贝的拷贝构造函数
-  double_list(const double_list<T> &other)
-      : size(0), head(nullptr), tail(nullptr) {
-    for (const_iterator it = other.cbegin(); it != other.cend(); ++it) {
-      insert_tail(*it);
-    }
-  }
-  // 赋值运算符重载
-  double_list<T> &operator=(const double_list<T> &other) {
-    if (this != &other) {
-      clear();
-      for (const_iterator it = other.cbegin(); it != other.cend(); ++it) {
-        insert_tail(*it);
-      }
-    }
-    return *this;
-  }
-  ~double_list() { clear(); }
-  class iterator {
-  public:
-    double_list *dl;
-    node *ptr;
-
-    iterator(double_list *dl = nullptr, node *ptr = nullptr)
-        : dl(dl), ptr(ptr) {}
-    iterator(node *node) : ptr(node) {}
-    iterator(const iterator &t) {
-      if (this == &t)
-        return;
-      dl = t.dl;
-      ptr = t.ptr;
-    }
-    ~iterator() = default;
-    /**
-     * iter++
-     */
-    iterator operator++(int) {
-      iterator tmp = *this;
-      if (ptr == nullptr)
-        throw "invalid";
-      if (*this == dl->end())
-        throw "invalid";
-      ptr = ptr->next;
-      return tmp;
-    }
-    /**
-     * ++iter
-     */
-    iterator &operator++() {
-      if (ptr == nullptr)
-        throw "invalid";
-      if (*this == dl->end())
-        throw "invalid";
-      ptr = ptr->next;
-      return *this;
-    }
-    /**
-     * iter--
-     */
-    // 前置 operator--
-    iterator &operator--() {
-      if (ptr == nullptr) {
-        // 处理 end() 迭代器的情况
-        if (dl == nullptr || dl->tail == nullptr) {
-          throw "invalid"; // 链表为空，无法--
-        }
-        ptr = dl->tail;
-        return *this;
-      }
-      if (ptr == dl->head) {
-        throw "invalid"; // 已经是 begin()
-      }
-      ptr = ptr->prev;
-      return *this;
-    }
-
-    // 后置 operator--
-    iterator operator--(int) {
-      iterator temp = *this;
-      if (ptr == nullptr) {
-        if (dl == nullptr || dl->tail == nullptr) {
-          throw "invalid";
-        }
-        ptr = dl->tail;
-        return temp;
-      }
-      if (ptr == dl->head) {
-        throw "invalid";
-      }
-      ptr = ptr->prev;
-      return temp;
-    }
-
-    iterator operator+(int n) {
-      iterator temp = *this;
-      if (n < 0) {
-        for (int i = 0; i < -n; i++) {
-          if (temp.ptr == nullptr)
-            throw "invalid";
-          temp.ptr = temp.ptr->prev;
-        }
-      } else {
-        for (int i = 0; i < n; i++) {
-          if (temp.ptr == nullptr)
-            throw "invalid";
-          temp.ptr = temp.ptr->next;
-        }
-      }
-      return temp;
-    }
-    /**
-     * if the iter didn't point to a value
-     * throw " invalid"
-     */
-    T &operator*() const {
-      if (ptr == nullptr)
-        throw "invalid";
-      return ptr->val;
-    }
-    /**
-     * other operation
-     */
-    T *operator->() const noexcept { return &(ptr->val); }
-    bool operator==(const iterator &rhs) const {
-      if (this == &rhs)
-        return true;
-      if (dl != rhs.dl)
-        return false;
-      return ptr == rhs.ptr;
-    }
-    bool operator!=(const iterator &rhs) const {
-      if (this == &rhs)
-        return false;
-
-      if (dl != rhs.dl)
-        return true;
-      return ptr != rhs.ptr;
-    }
-  };
-  //  double_list also uses const interator, for the linked_hashmap
-  class const_iterator {
-  public:
-    const double_list *dl; // 关联的双向链表
-    node *ptr;             // 当前指向的节点
-
-    const_iterator(const double_list *dl = nullptr, node *ptr = nullptr)
-        : dl(dl), ptr(ptr) {}
-    const_iterator(const const_iterator &t) = default;
-    ~const_iterator() = default;
-
-    const_iterator operator++(int) {
-      const_iterator tmp = *this;
-      if (ptr == nullptr)
-        throw "invalid";
-      if (*this == dl->cend())
-        throw "invalid";
-      ptr = ptr->next;
-      return tmp;
-    }
-
-    const_iterator &operator++() {
-      if (ptr == nullptr)
-        throw "invalid";
-      if (*this == dl->cend())
-        throw "invalid";
-      ptr = ptr->next;
-      return *this;
-    }
-
-    const_iterator operator--(int) {
-      const_iterator temp = *this;
-      if (ptr == nullptr)
-        throw "invalid";
-      if (*this == dl->cbegin())
-        throw "invalid";
-      ptr = ptr->prev;
-      return temp;
-    }
-
-    const_iterator &operator--() {
-      if (ptr == nullptr)
-        throw "invalid";
-      if (*this == dl->cbegin())
-        throw "invalid";
-      ptr = ptr->prev;
-      return *this;
-    }
-
-    const_iterator operator+(int n) const {
-      const_iterator temp = *this;
-      if (n < 0) {
-        for (int i = 0; i < -n; i++) {
-          if (temp.ptr == nullptr)
-            throw "invalid";
-          temp.ptr = temp.ptr->prev;
-        }
-      } else {
-        for (int i = 0; i < n; i++) {
-          if (temp.ptr == nullptr)
-            throw "invalid";
-          temp.ptr = temp.ptr->next;
-        }
-      }
-      return temp;
-    }
-
-    const T &operator*() const {
-      if (ptr == nullptr)
-        throw "invalid";
-      return ptr->val;
-    }
-
-    const T *operator->() const noexcept {
-      if (ptr == nullptr)
-        throw "invalid";
-      return &(ptr->val);
-    }
-
-    bool operator==(const const_iterator &rhs) const { return ptr == rhs.ptr; }
-
-    bool operator!=(const const_iterator &rhs) const { return ptr != rhs.ptr; }
-  };
-  // begin() and end()
-  const_iterator cbegin() const { return const_iterator(this, head); }
-
-  const_iterator cend() const { return const_iterator(this, nullptr); }
-
-  iterator begin() {
-    if (head == nullptr)
-      return iterator(this, nullptr);
-    return iterator(this, head);
-  }
-  iterator end() { return iterator(this, nullptr); }
-
-  iterator get_tail() const { return iterator(tail); }
-  iterator erase(iterator pos) {
-    if (pos.ptr == nullptr)
-      return end();
-    node *p = pos.ptr;
-    node *prev = p->prev;
-    node *next = p->next;
-
-    if (prev)
-      prev->next = next;
-    else
-      head = next;
-    if (next)
-      next->prev = prev;
-    else
-      tail = prev;
-
-    delete p; // 释放被删除节点的内存
-    size--;   // 更新链表长度
-
-    return (next) ? iterator(this, next) : end();
-  }
-
-  iterator insert(iterator pos, const T &val) {
-    if (pos.ptr == nullptr) {
-      if (tail == nullptr) {
-        insert_tail(val);
-        return iterator(this, tail);
-      }
-      node *new_node = new node(val, tail, nullptr);
-      tail->next = new_node;
-      tail = new_node;
-      size++;
-      return iterator(this, new_node);
-    }
-
-    node *new_node = new node(val, pos.ptr->prev, pos.ptr);
-    if (pos.ptr->prev)
-      pos.ptr->prev->next = new_node;
-    else
-      head = new_node;
-
-    pos.ptr->prev = new_node;
-    size++;
-    return iterator(this, new_node);
-  }
-
-  /**
-   * the following are operations of double list
-   */
-  void insert_head(const T &val) {
-    node *new_node = new node(val, nullptr, head);
-    if (head != nullptr)
-      head->prev = new_node;
-    head = new_node;
-    if (tail == nullptr)
-      tail = head;
-    size++;
-  }
-  void insert_tail(const T &val) {
-    node *new_node = new node(val, tail, nullptr);
-    if (tail != nullptr)
-      tail->next = new_node;
-    tail = new_node;
-    if (head == nullptr)
-      head = tail;
-    size++;
-  }
-  void delete_head() {
-    if (head == nullptr)
-      return;
-    node *temp = head;
-    head = head->next;
-    if (head != nullptr)
-      head->prev = nullptr;
-    delete temp;
-    size--;
-  }
-  void delete_tail() {
-    if (tail == nullptr)
-      return;
-    node *temp = tail;
-    tail = tail->prev;
-    if (tail != nullptr)
-      tail->next = nullptr;
-    delete temp;
-    size--;
-  }
-
-  bool empty() const {
-    if (size == 0)
-      return true;
-    return false;
-  }
-  void clear() {
-    node *cur = head;
-    while (cur) {
-      node *tmp = cur;
-      cur = cur->next;
-      delete tmp;
-    }
-    size = 0;
-    head = tail = nullptr;
-  }
-};
-
 template <class T> class deque {
 
 private:
   struct block {
     double_list<T> data;
-    block *prev;
-    block *next;
-
-    block(block *prev = nullptr, block *next = nullptr)
-        : prev(prev), next(next) {}
   };
-  block *head;
-  block *tail;
+
+  double_list<block> blocks;
 
   size_t total_size;
   size_t min_block_size() const {
@@ -386,52 +25,52 @@ private:
     return std::max(size_t(4), (size_t)std::sqrt(total_size) * 2);
   }
 
-  void split_block(block *cur) {
-    if (cur->data.size <= max_block_size())
-      return; // 没超出 max_block_size，无需拆分
+  void rebalance() {
+    if (blocks.empty())
+      return;
 
-    block *new_block = new block(cur, cur->next);
-    if (cur->next)
-      cur->next->prev = new_block;
-    cur->next = new_block;
-    if (tail == cur)
-      tail = new_block; // 如果 cur 是 tail，更新 tail 指向新块
-
-    // 把 cur 后半部分的数据移动到 new_block
-    size_t move_size = cur->data.size / 2;
-    auto it = cur->data.begin();
-    for (size_t i = 0; i < move_size; i++)
-      ++it; // 定位到拆分点
-
-    while (it != cur->data.end()) {
-      new_block->data.insert_tail(*it);
-      it = cur->data.erase(it); // 移除 cur 里已经移动的数据
+    auto it = blocks.begin();
+    while (it != blocks.end()) {
+      if (it->data.size() > max_block_size()) {
+        split_block(it);
+      } else if (it->data.size() < min_block_size()) {
+        merge_blocks(it);
+      }
+      ++it;
     }
   }
 
-  void merge_blocks(block *cur) {
-    if (!cur || !cur->next)
-      return; // cur 或 cur->next 为空，不能合并
+  void split_block(typename double_list<block>::iterator it) {
+    if (it->data.size() <= max_block_size())
+      return;
 
-    block *next_block = cur->next;
-    if (cur->data.size + next_block->data.size > max_block_size())
-      return; // 不能合并
-
-    // 把 next_block 的数据移动到 cur
-    auto it = next_block->data.begin();
-    while (it != next_block->data.end()) {
-      cur->data.insert_tail(*it);
-      it++;
+    double_list<T> new_block_data;
+    auto split_it = it->data.begin();
+    for (int i = 0; i < it->data.size() / 2; i++) {
+      split_it++;
     }
+    new_block_data.splice(new_block_data.begin(), it->data, split_it,
+                          it->data.end());
 
-    // 从链表中移除 next_block
-    cur->next = next_block->next;
-    if (next_block->next)
-      next_block->next->prev = cur;
-    else
-      tail = cur; // 如果 next_block 是 tail，更新 tail
+    block new_block;
+    new_block.data = new_block_data;
 
-    delete next_block; // 释放内存
+    auto next_it = ++it;
+    blocks.insert(next_it, new_block);
+  }
+
+  void merge_blocks(typename double_list<block>::iterator it) {
+    if (it == blocks.end())
+      return;
+    auto next_it = it;
+    ++next_it;
+    if (next_it == blocks.end())
+      return;
+    if (it->data.size() + next_it->data.size() > max_block_size())
+      return;
+    it->data.splice(it->data.end(), next_it->data, next_it->data.begin(),
+                    next_it->data.end());
+    blocks.erase(next_it);
   }
 
 public:
@@ -440,31 +79,33 @@ public:
     friend class deque;
 
   private:
-    block *current;
+    typename double_list<block>::iterator block_it;
     typename double_list<T>::iterator iter;
     deque *dq;
 
   public:
-    iterator(block *cur_block = nullptr,
-             typename double_list<T>::iterator it =
-                 typename double_list<T>::iterator(),
-             deque *parent_dq = nullptr)
-        : current(cur_block), iter(it), dq(parent_dq) {}
-
-    iterator(const iterator &other)
-        : current(other.current), iter(other.iter), dq(other.dq) {}
+    iterator() {}
+    iterator(typename double_list<T>::iterator iter,
+             typename double_list<block>::iterator b_it, deque *dq)
+        : iter(iter), block_it(b_it), dq(dq) {}
 
     iterator &operator++() {
-      ++iter;
-      if (current) {
-        if (iter == current->data.end()) {
-          if (current->next) {
-            current = current->next;
-            iter = current->data.begin();
+      if (iter != block_it->data.end()) {
+        ++iter;
+        if (iter == block_it->data.end()) {
+          ++block_it;
+          if (block_it != dq->blocks.end()) {
+            iter = block_it->data.begin();
           } else {
-            current = nullptr;
             iter = typename double_list<T>::iterator();
           }
+        }
+      } else {
+        ++block_it;
+        if (block_it != dq->blocks.end()) {
+          iter = block_it->data.begin();
+        } else {
+          iter = typename double_list<T>::iterator();
         }
       }
       return *this;
@@ -477,12 +118,19 @@ public:
     }
 
     iterator &operator--() {
-      if (current && iter == current->data.begin() && current->prev) {
-        current = current->prev;
-        iter = current->data.get_tail();
-      } else {
-        --iter;
+      if (block_it == dq->blocks.end()) {
+        --block_it;
+        iter = block_it->data.end();
       }
+      if (iter == block_it->data.begin()) {
+        if (block_it != dq->blocks.begin()) {
+          --block_it;
+          iter = block_it->data.end();
+        } else {
+          throw invalid_iterator();
+        }
+      }
+      --iter;
       return *this;
     }
 
@@ -495,69 +143,26 @@ public:
     T &operator*() const { return *iter; }
     T *operator->() const noexcept { return &(*iter); }
 
-    iterator operator+(const int &n) const {
-      if (n == 0)
-        return *this;
-      if (n < 0)
-        return *this - (-n);
-
-      iterator res = *this;
-      block *cur_block = res.current;
-      typename double_list<T>::iterator cur_iter = res.iter;
-
-      int remain = n;
-
-      // 处理当前块中的元素
-      if (cur_block) {
-        auto it = cur_iter;
-        auto end = cur_block->data.end();
-        int current_block_remain = 0;
-        while (it != end) {
-          ++it;
-          ++current_block_remain;
-        }
-
-        if (remain < current_block_remain) {
-          it = cur_iter;
-          for (int i = 0; i < remain; ++i) {
-            ++it;
-          }
-          res.iter = it;
-          return res;
-        } else {
-          remain -= current_block_remain;
-          cur_block = cur_block->next;
-        }
+    iterator operator+(int n) const {
+      iterator temp = *this;
+      if (n >= 0) {
+        while (n-- > 0)
+          ++temp;
+      } else {
+        while (n++ < 0)
+          --temp;
       }
-
-      // 跨越多个块
-      while (cur_block && remain >= cur_block->data.size) {
-        remain -= cur_block->data.size;
-        cur_block = cur_block->next;
-      }
-
-      if (!cur_block) {
-        // 如果已经到达末尾，返回end()
-        return iterator(nullptr, typename double_list<T>::iterator(), dq);
-      }
-
-      // 处理最后一个块内的元素
-      auto it = cur_block->data.begin();
-      for (int i = 0; i < remain; ++i) {
-        ++it;
-      }
-
-      return iterator(cur_block, it, dq);
+      return temp;
     }
 
-    iterator operator-(const int &n) const { return *this + (-n); }
+    iterator operator-(int n) const { return *this + (-n); }
 
     int operator-(const iterator &rhs) const {
       if (dq != rhs.dq)
         throw invalid_iterator();
       int dist = 0;
       iterator temp = rhs;
-      while (temp.current != current || temp.iter != iter) {
+      while (temp != *this) {
         ++temp;
         ++dist;
       }
@@ -571,11 +176,12 @@ public:
 
     iterator &operator-=(const int &n) {
       *this = *this - n;
+
       return *this;
     }
 
     bool operator==(const iterator &rhs) const {
-      return current == rhs.current && iter == rhs.iter;
+      return block_it == rhs.block_it && iter == rhs.iter;
     }
 
     bool operator!=(const iterator &rhs) const { return !(*this == rhs); }
@@ -585,25 +191,31 @@ public:
     friend class deque;
 
   private:
-    const block *current;
+    typename double_list<block>::const_iterator block_it;
     typename double_list<T>::const_iterator iter;
     const deque *dq;
 
   public:
-    const_iterator(const block *cur_block = nullptr,
-                   typename double_list<T>::const_iterator it =
-                       typename double_list<T>::const_iterator(),
-                   const deque *parent_dq = nullptr)
-        : current(cur_block), iter(it), dq(parent_dq) {}
-
-    const_iterator(const iterator &other)
-        : current(other.current), iter(other.iter), dq(other.dq) {}
+    const_iterator() {}
+    const_iterator(typename double_list<T>::const_iterator iter,
+                   typename double_list<block>::const_iterator b_it,
+                   const deque *dq)
+        : iter(iter), block_it(b_it), dq(dq) {}
 
     const_iterator &operator++() {
-      ++iter;
-      if (iter == current->data.cend() && current->next) {
-        current = current->next;
-        iter = current->data.cbegin();
+      if (iter != block_it->data.cend()) {
+        ++iter;
+        if (iter == block_it->data.cend()) {
+          ++block_it;
+          if (block_it != dq->blocks.cend()) {
+            iter = block_it->data.cbegin();
+          }
+        }
+      } else {
+        ++block_it;
+        if (block_it != dq->blocks.cend()) {
+          iter = block_it->data.cbegin();
+        }
       }
       return *this;
     }
@@ -615,12 +227,19 @@ public:
     }
 
     const_iterator &operator--() {
-      if (iter == current->data.cbegin() && current->prev) {
-        current = current->prev;
-        iter = current->data.get_tail();
-      } else {
-        --iter;
+      if (block_it == dq->blocks.cend()) {
+        --block_it;
+        iter = block_it->data.cend();
       }
+      if (iter == block_it->data.cbegin()) {
+        if (block_it != dq->blocks.cbegin()) {
+          --block_it;
+          iter = block_it->data.cend();
+        } else {
+          throw invalid_iterator();
+        }
+      }
+      --iter;
       return *this;
     }
 
@@ -633,343 +252,300 @@ public:
     const T &operator*() const { return *iter; }
     const T *operator->() const noexcept { return &(*iter); }
 
+    const_iterator operator+(int n) const {
+      const_iterator temp = *this;
+      if (n >= 0) {
+        while (n-- > 0)
+          ++temp;
+      } else {
+        while (n++ < 0)
+          --temp;
+      }
+      return temp;
+    }
+
+    const_iterator operator-(int n) const { return *this + (-n); }
+
+    int operator-(const const_iterator &rhs) const {
+      if (dq != rhs.dq)
+        throw invalid_iterator();
+
+      int dist = 0;
+      auto lhs_block = block_it;
+      auto rhs_block = rhs.block_it;
+      auto lhs_iter = iter;
+      auto rhs_iter = rhs.iter;
+
+      if (lhs_block == rhs_block) {
+        // 在同一个 block 里，直接计算迭代器差值
+        while (rhs_iter != lhs_iter) {
+          ++rhs_iter;
+          ++dist;
+        }
+        return dist;
+      }
+
+      // `rhs` 在 `lhs` 之前
+      auto temp_block = rhs_block;
+      auto temp_iter = rhs_iter;
+
+      // 计算 `rhs_iter` 到 `rhs_block` 末尾的元素数
+      while (temp_iter != temp_block->data.cend()) {
+        ++temp_iter;
+        ++dist;
+      }
+
+      // 遍历中间完整的 block
+      ++temp_block;
+      while (temp_block != lhs_block) {
+
+        dist += temp_block->data.sizee;
+        ++temp_block;
+      }
+
+      // 计算 `lhs_block` 头部到 `lhs_iter` 之间的距离
+      temp_iter = lhs_block->data.cbegin();
+      while (temp_iter != lhs_iter) {
+        ++temp_iter;
+        ++dist;
+      }
+
+      return dist;
+    }
+
+    const_iterator &operator+=(const int &n) {
+      *this = *this + n;
+      return *this;
+    }
+
+    const_iterator &operator-=(const int &n) {
+      *this = *this - n;
+      return *this;
+    }
+
     bool operator==(const const_iterator &rhs) const {
-      return current == rhs.current && iter == rhs.iter;
+      return block_it == rhs.block_it && iter == rhs.iter;
     }
     bool operator!=(const const_iterator &rhs) const { return !(*this == rhs); }
   };
 
-  /**
-   * constructors.
-   */
-  deque() : head(nullptr), tail(nullptr), total_size(0) {}
-  deque(const deque &other) : head(nullptr), tail(nullptr), total_size(0) {
-    block *cur = other.head;
-    while (cur != nullptr) {
-      block *new_block = new block();
-      new_block->data = cur->data;
-      new_block->prev = tail;
-
-      if (tail != nullptr) {
-        tail->next = new_block;
-      } else {
-        head = new_block;
-      }
-
-      tail = new_block;
-      cur = cur->next;
-    }
-
-    total_size = other.total_size;
+  deque() : total_size(0) {}
+  deque(const deque &other) : total_size(other.total_size) {
+    blocks = other.blocks;
   }
 
-  /**
-   * deconstructor.
-   */
   ~deque() { clear(); }
 
-  /**
-   * assignment operator.
-   */
   deque &operator=(const deque &other) {
-    if (this == &other) {
-      return *this;
+    if (this != &other) {
+      total_size = other.total_size;
+      blocks = other.blocks;
     }
-
-    clear();
-
-    block *cur = other.head;
-    while (cur != nullptr) {
-      block *new_block = new block();
-      new_block->data = cur->data;
-      new_block->prev = tail;
-
-      if (tail != nullptr) {
-        tail->next = new_block;
-      } else {
-        head = new_block;
-      }
-
-      tail = new_block;
-      cur = cur->next;
-    }
-
-    total_size = other.total_size;
-
     return *this;
   }
-  /**
-   * access a specified element with bound checking.
-   * throw index_out_of_bound if out of bound.
-   */
+
   T &at(const size_t &pos) {
     if (pos >= total_size)
       throw index_out_of_bound();
-    block *cur = head;
-    size_t idx = pos;
-    while (cur) {
-      if (idx < cur->data.size) {
-        auto it = cur->data.begin();
-        for (size_t i = 0; i < idx; i++) {
-          it++;
+    auto it = blocks.begin();
+    size_t count = 0;
+    while (it != blocks.end()) {
+      if (count + it->data.size() > pos) {
+        auto data_it = it->data.begin();
+        for (size_t i = 0; i < pos - count; ++i) {
+          ++data_it;
         }
-
-        return *it;
+        return *data_it;
       }
-      idx -= cur->data.size;
-      cur = cur->next;
+      count += it->data.size();
+      ++it;
     }
     throw index_out_of_bound();
   }
+
   const T &at(const size_t &pos) const {
     if (pos >= total_size)
       throw index_out_of_bound();
-    block *cur = head;
-    size_t idx = pos;
-    while (cur) {
-      if (idx < cur->data.size) {
-        auto it = cur->data.begin();
-        for (size_t i = 0; i < idx; i++) {
-          it++;
+    auto it = blocks.cbegin();
+    size_t count = 0;
+    while (it != blocks.cend()) {
+      if (count + it->data.sizee > pos) {
+        auto data_it = it->data.cbegin();
+        for (size_t i = 0; i < pos - count; ++i) {
+          ++data_it;
         }
-        return *it;
+        return *data_it;
       }
-      idx -= cur->data.size;
-      cur = cur->next;
-    }
-    throw index_out_of_bound();
-  }
-  T &operator[](const size_t &pos) {
-    block *cur = head;
-    size_t idx = pos;
-    while (cur) {
-      if (idx < cur->data.size) {
-        auto it = cur->data.begin();
-        for (size_t i = 0; i < idx; i++) {
-          it++;
-        }
-        return *it;
-      }
-      idx -= cur->data.size;
-      cur = cur->next;
-    }
-    throw index_out_of_bound();
-  }
-  const T &operator[](const size_t &pos) const {
-    block *cur = head;
-    size_t idx = pos;
-    while (cur) {
-      if (idx < cur->data.size) {
-        auto it = cur->data.begin();
-        for (size_t i = 0; i < idx; i++) {
-          it++;
-        }
-        return *it;
-      }
-      idx -= cur->data.size;
-      cur = cur->next;
+      count += it->data.sizee;
+      ++it;
     }
     throw index_out_of_bound();
   }
 
-  /**
-   * access the first element.
-   * throw container_is_empty when the container is empty.
-   */
+  T &operator[](const size_t &pos) { return at(pos); }
+  const T &operator[](const size_t &pos) const { return at(pos); }
+
   const T &front() const {
     if (total_size == 0)
       throw container_is_empty();
-    return *(head->data.begin());
+    return blocks.cfront().data.cfront();
   }
 
-  /**
-   * access the last element.
-   * throw container_is_empty when the container is empty.
-   */
   const T &back() const {
     if (total_size == 0)
       throw container_is_empty();
-    return *(tail->data.get_tail());
+    return blocks.cback().data.cback();
   }
 
-  /**
-   * return an iterator to the beginning.
-   */
   iterator begin() {
-    return iterator(
-        head, head ? head->data.begin() : typename double_list<T>::iterator(),
-        this);
+    if (blocks.empty())
+      return end();
+    return iterator(blocks.begin()->data.begin(), blocks.begin(), this);
   }
+
   const_iterator cbegin() const {
-    return const_iterator(head,
-                          head ? head->data.cbegin()
-                               : typename double_list<T>::const_iterator(),
+    return const_iterator(blocks.cbegin()->data.cbegin(), blocks.cbegin(),
                           this);
   }
 
-  /**
-   * return an iterator to the end.
-   */
   iterator end() {
-    return iterator(nullptr, typename double_list<T>::iterator(), this);
+    return iterator(typename double_list<T>::iterator(), blocks.end(), this);
   }
+
   const_iterator cend() const {
-    return const_iterator(nullptr, typename double_list<T>::const_iterator(),
-                          this);
+    return const_iterator(typename double_list<T>::const_iterator(),
+                          blocks.cend(), this);
   }
 
-  /**
-   * check whether the container is empty.
-   */
-  bool empty() const {
-    return (total_size == 0) ? true : false;
-  } // 好蠢，但是我喜欢。
+  bool empty() const { return total_size == 0; }
 
-  /**
-   * return the number of elements.
-   */
   size_t size() const { return total_size; }
 
-  /**
-   * clear all contents.
-   */
   void clear() {
-    while (head != nullptr) {
-      block *tmp = head;
-      head = head->next;
-      tmp->data.clear();
-      delete tmp;
-    }
-    tail = nullptr;
+    blocks.clear();
     total_size = 0;
   }
 
-  /**
-   * insert value before pos.
-   * return an iterator pointing to the inserted value.
-   * throw if the iterator is invalid or it points to a wrong place.
-   */
   iterator insert(iterator pos, const T &value) {
-    if (empty()) {
-      if (pos != end())
-        throw invalid_iterator();
-      // 初始化第一个块
-      allocateInitialBlock(value);
-      return begin();
-    }
-
-    // 处理插入到 begin()
-    if (pos == begin()) {
-      push_front(value);
-      return begin();
-    }
-
-    // 处理插入到 end()
+    if (pos.dq != this)
+      throw invalid_iterator();
     if (pos == end()) {
       push_back(value);
-      return --end(); // 安全递减，因为 deque 非空
+      return --end();
     }
-
-    // 常规插入检查
-    if (!pos.current || pos.iter == pos.current->data.end())
-      throw invalid_iterator();
-
-    // 执行插入并维护结构
-    auto inserted_iter = pos.current->data.insert(pos.iter, value);
+    auto inserted = pos.block_it->data.insert(pos.iter, value);
     total_size++;
-
-    if (pos.current->data.size > max_block_size())
-      split_block(pos.current);
-
-    return iterator(pos.current, inserted_iter, this);
+    if (pos.block_it->data.size() > max_block_size())
+      split_block(pos.block_it);
+    return iterator(inserted, pos.block_it, this);
   }
 
-  // 辅助方法：在deque为空时初始化第一个块
-  void allocateInitialBlock(const T &value) {
-    block *new_block = new block();
-    new_block->data.insert_tail(value);
-    head = tail = new_block;
+  void allocateInitialblock(const T &value) {
+    block new_block;
+    new_block.data.insert_tail(value);
+    blocks.insert_tail(new_block);
     total_size = 1;
   }
 
-  /**
-   * remove the element at pos.
-   * return an iterator pointing to the following element. if pos points to
-   * the last element, return end(). throw if the container is empty,
-   * the iterator is invalid, or it points to a wrong place.
-   */
   iterator erase(iterator pos) {
-    if (!pos.current || total_size == 0)
-      throw container_is_empty();
-    pos.iter = pos.current->data.erase(pos.iter);
+    if (pos == end() || pos.dq != this)
+      throw invalid_iterator();
+    auto current_block = pos.block_it;
+    auto next = current_block->data.erase(pos.iter);
     total_size--;
-    if (pos.current->data.size < min_block_size() && pos.current->next) {
-      merge_blocks(pos.current);
+
+    if (current_block->data.empty()) {
+      auto next_block = current_block;
+      ++next_block;
+      blocks.erase(current_block);
+      if (next_block != blocks.end()) {
+        return iterator(next_block->data.begin(), next_block, this);
+      } else {
+        return end();
+      }
+    } else {
+      if (current_block->data.size() < min_block_size() &&
+          current_block != blocks.begin()) {
+        auto prev_block = current_block;
+        --prev_block;
+
+        size_t prev_size = prev_block->data.size();
+        size_t current_size = current_block->data.size();
+        size_t offset = 0;
+        for (auto it = current_block->data.begin(); it != next; it++)
+          offset++;
+
+        if (prev_block->data.size() + current_size <= max_block_size()) {
+          merge_blocks(prev_block);
+          // 合并后，prev_block的data包含了原current_block的数据
+          // 计算新的迭代器位置
+          auto new_iter = prev_block->data.begin();
+          for (auto i = 0; i < prev_size + offset; i++)
+            new_iter++;
+          next = new_iter;
+          current_block = prev_block;
+        }
+      }
+
+      if (next != current_block->data.end()) {
+        return iterator(next, current_block, this);
+      } else {
+        auto next_block = current_block;
+        ++next_block;
+        if (next_block != blocks.end()) {
+          return iterator(next_block->data.begin(), next_block, this);
+        } else {
+          return end();
+        }
+      }
     }
-    if (pos.iter == pos.current->data.end() && pos.current->next)
-      return iterator(pos.current->next, pos.current->next->data.begin(), this);
-    return pos;
   }
 
-  /**
-   * add an element to the end.
-   */
   void push_back(const T &value) {
-    if (!tail) {
-      allocateInitialBlock(value);
-      return;
+    if (blocks.empty() || blocks.back().data.size() >= max_block_size()) {
+      blocks.insert_tail(block{});
     }
-
-    tail->data.insert_tail(value);
+    auto last_block = blocks.get_tail();
+    last_block->data.insert_tail(value);
     total_size++;
-
-    if (tail->data.size > max_block_size())
-      split_block(tail);
+    rebalance();
   }
 
-  /**
-   * remove the last element.
-   * throw when the container is empty.
-   */
   void pop_back() {
-    if (!tail || total_size == 0)
+    if (empty())
       throw container_is_empty();
-    tail->data.delete_tail();
+    auto last_block = blocks.get_tail();
+    last_block->data.pop_back();
     total_size--;
-    if (tail->data.size < min_block_size() && tail->prev) {
-      merge_blocks(tail->prev);
+    if (last_block->data.empty()) {
+      blocks.pop_back();
     }
+    rebalance();
   }
-
-  /**
-   * insert an element to the beginning.
-   */
 
   void push_front(const T &value) {
-    if (!head) {
-      allocateInitialBlock(value);
+    if (blocks.empty()) {
+      allocateInitialblock(value);
       return;
     }
-
-    head->data.insert_head(value);
+    auto first_block = blocks.begin();
+    first_block->data.insert_head(value);
     total_size++;
 
-    if (head->data.size > max_block_size())
-      split_block(head);
+    if (first_block->data.size() > max_block_size())
+      split_block(first_block);
   }
 
-  /**
-   * remove the first element.
-   * throw when the container is empty.
-   */
   void pop_front() {
-    if (!head || total_size == 0)
+    if (empty())
       throw container_is_empty();
-    head->data.delete_head();
+    auto first_block = blocks.begin();
+    first_block->data.pop_front();
     total_size--;
-    if (head->data.size < min_block_size() && head->next) {
-      merge_blocks(head);
+    if (first_block->data.empty()) {
+      blocks.pop_front();
     }
+    rebalance();
   }
 };
 
