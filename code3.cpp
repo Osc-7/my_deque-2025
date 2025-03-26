@@ -8,7 +8,7 @@
 #include <vector>
 
 // std::default_random_engine randnum(time(NULL));
-
+static int count = 0;
 static const int N = 10000;
 static const int N_SPEED = 21000;
 
@@ -1066,6 +1066,7 @@ std::pair<bool, double> iteratorInsertPersistenceChecker() {
     int tmp = rand();
     delta = itA - a.begin();
     if (b.begin() + delta != itB) {
+      std::cout << "here1 ";
       return std::make_pair(false, 0);
     }
     if (rand() % 2) {
@@ -1083,18 +1084,27 @@ std::pair<bool, double> iteratorInsertPersistenceChecker() {
     }
     delta = itA - a.begin();
     if (b.begin() + delta != itB) {
+      std::cout << "here4 ";
       return std::make_pair(false, 0);
     }
+
     itA = a.insert(itA, tmp);
+    DEBUG = true;
     itB = b.insert(itB, tmp);
+    DEBUG = false;
     delta = itA - a.begin();
+    count++;
     if (b.begin() + delta != itB) {
+      std::cout << count << std::endl;
       return std::make_pair(false, 0);
     }
+
     if (*itA != *itB) {
+      std::cout << "here3 ";
       return std::make_pair(false, 0);
     }
   }
+
   timer.stop();
   if (!isEqual(a, b)) {
     return std::make_pair(false, 0);

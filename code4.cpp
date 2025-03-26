@@ -85,7 +85,7 @@ void test2() {
     flag++;
   }
   if (flag != 2 && need_to_check_throw) {
-    puts("Wrong Answer");
+    puts("Wrong Answer1");
     return;
   }
   for (int i = 1; i <= N; i++) {
@@ -105,19 +105,20 @@ void test2() {
     flag = 1;
   }
   if (flag != 1 && need_to_check_throw) {
-    puts("Wrong Answer");
+    puts("Wrong Answer2");
     return;
   }
   int num = q.size();
   for (int i = 0; i < 100; i++) {
     int t = rand() % num;
     if (q[t] != stl[t] || q.at(t) != stl.at(t)) {
-      puts("Wrong Answer");
+      puts("Wrong Answer3");
       return;
     }
   }
+
   if (q.front() != stl.front() || q.back() != stl.back()) {
-    puts("Wrong Answer");
+    puts("Wrong Answe4");
     return;
   }
   puts("Accept");

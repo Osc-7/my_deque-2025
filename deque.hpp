@@ -3,10 +3,11 @@
 
 #include "double_list.hpp"
 #include "exceptions.hpp"
-
 #include <cstddef>
+#include <iostream>
 #include <iterator>
-
+bool DEBUG = false;
+static int counnt = 0;
 namespace sjtu {
 template <class T> class deque {
 
@@ -154,7 +155,35 @@ public:
       }
       return temp;
     }
+    /*
+    iterator operator+(const int &n) const {
+      if (n == 0)
+        return *this;
 
+      iterator temp = *this;
+      int remain = n;
+      while (remain > 0) {
+        int block_remaining = 0;
+        for (auto it = temp.iter; it != temp.block_it->data.end(); it++)
+          block_remaining++;
+        if (remain < block_remaining) {
+          for (int i = 0; i < remain; i++) {
+            ++temp.iter;
+          }
+          break;
+        } else {
+          remain -= block_remaining;
+          ++temp.block_it;
+          if (temp.block_it != dq->blocks.end()) {
+            temp.iter = temp.block_it->data.begin();
+          } else {
+            throw index_out_of_bound();
+          }
+        }
+      }
+      return temp;
+    }
+    */
     iterator operator-(int n) const { return *this + (-n); }
 
     int operator-(const iterator &rhs) const {
@@ -285,11 +314,9 @@ public:
         return dist;
       }
 
-      // `rhs` 在 `lhs` 之前
       auto temp_block = rhs_block;
       auto temp_iter = rhs_iter;
 
-      // 计算 `rhs_iter` 到 `rhs_block` 末尾的元素数
       while (temp_iter != temp_block->data.cend()) {
         ++temp_iter;
         ++dist;
@@ -427,26 +454,44 @@ public:
   }
 
   iterator insert(iterator pos, const T &value) {
+    if (DEBUG)
+      counnt++;
     if (pos.dq != this)
       throw invalid_iterator();
+    if (pos == begin()) {
+      push_front(value);
+      return begin();
+    }
     if (pos == end()) {
       push_back(value);
       return --end();
     }
-    auto inserted = pos.block_it->data.insert(pos.iter, value);
+
+    int offset = pos - begin();
+
+    auto new_data_iter = pos.block_it->data.insert(pos.iter, value);
     total_size++;
-    if (pos.block_it->data.size() > max_block_size())
-      split_block(pos.block_it);
-    return iterator(inserted, pos.block_it, this);
+
+    // if (DEBUG) {
+    // std::cout << "Before rebalance: " << &(*inserted) << std::endl;
+    //}
+    rebalance();
+    // if (DEBUG) {
+    // std::cout << "After rebalance: " << &(*inserted) << std::endl;
+    // std::cout << counnt << std::endl;
+    //}
+
+    return begin() + offset;
   }
 
+  /*
   void allocateInitialblock(const T &value) {
     block new_block;
     new_block.data.insert_tail(value);
     blocks.insert_tail(new_block);
     total_size = 1;
   }
-
+  */
   iterator erase(iterator pos) {
     if (pos == end() || pos.dq != this)
       throw invalid_iterator();
@@ -524,16 +569,14 @@ public:
   }
 
   void push_front(const T &value) {
-    if (blocks.empty()) {
-      allocateInitialblock(value);
-      return;
+    if (blocks.empty() || blocks.front().data.size() >= max_block_size()) {
+      blocks.insert_head(block{});
     }
     auto first_block = blocks.begin();
     first_block->data.insert_head(value);
     total_size++;
 
-    if (first_block->data.size() > max_block_size())
-      split_block(first_block);
+    rebalance();
   }
 
   void pop_front() {
