@@ -244,11 +244,7 @@ public:
 
   const_iterator cend() const { return const_iterator(this, nullptr); }
 
-  iterator begin() {
-    // if (head == nullptr)
-    // return iterator(this, nullptr);
-    return iterator(this, head);
-  }
+  iterator begin() { return iterator(this, head); }
   iterator end() { return iterator(this, nullptr); }
 
   iterator get_tail() const { return iterator(tail); }

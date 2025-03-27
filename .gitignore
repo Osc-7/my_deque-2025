@@ -1,11 +1,10 @@
 README_1.md
 
-code1.cpp
-code2.cpp
-
-code
-code1
-code2
+code*
+*.dSYM/
+.vscode/
 dequee.hpp
-deque.h
-deque>.hpp
+
+.gitignore
+
+tempCodeRunnerFile.cpp
