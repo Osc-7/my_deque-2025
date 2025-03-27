@@ -1089,9 +1089,7 @@ std::pair<bool, double> iteratorInsertPersistenceChecker() {
     }
 
     itA = a.insert(itA, tmp);
-    DEBUG = true;
     itB = b.insert(itB, tmp);
-    DEBUG = false;
     delta = itA - a.begin();
     count++;
     if (b.begin() + delta != itB) {

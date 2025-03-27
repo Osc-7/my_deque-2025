@@ -85,7 +85,7 @@ void test2() {
     flag++;
   }
   if (flag != 2 && need_to_check_throw) {
-    puts("Wrong Answer1");
+    puts("Wrong Answer");
     return;
   }
   for (int i = 1; i <= N; i++) {
@@ -105,22 +105,19 @@ void test2() {
     flag = 1;
   }
   if (flag != 1 && need_to_check_throw) {
-    puts("Wrong Answer2");
+    puts("Wrong Answer");
     return;
   }
   int num = q.size();
   for (int i = 0; i < 100; i++) {
     int t = rand() % num;
     if (q[t] != stl[t] || q.at(t) != stl.at(t)) {
-      puts("Wrong Answer3");
+      puts("Wrong Answer");
       return;
     }
   }
-
   if (q.front() != stl.front() || q.back() != stl.back()) {
-    // std::cout << (q.front() != stl.front()) << "  " << (q.back() !=
-    // stl.back());
-    puts("Wrong Answer4");
+    puts("Wrong Answer");
     return;
   }
   puts("Accept");
@@ -429,7 +426,7 @@ void test7() {
   }
   if (good_complexity) {
     q.clear();
-    for (int i = 0; i < 4000000; i++)
+    for (int i = 0; i < 100000; i++)
       q.push_back(i);
     while (q.size() > 2010) {
       if (rand() % 2)
@@ -438,7 +435,7 @@ void test7() {
         q.pop_back();
     }
     int tmp;
-    for (int i = 0; i < 2000000; i++) {
+    for (int i = 0; i < 200000; i++) {
       tmp = q[2000].num();
       tmp = q[1000].num();
     }

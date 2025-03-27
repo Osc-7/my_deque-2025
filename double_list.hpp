@@ -7,9 +7,9 @@ private:
     node(const T &val, node *prev = nullptr, node *next = nullptr)
         : val(val), prev(prev), next(next) {}
   };
+  int sizee;
 
 public:
-  int sizee;
   node *head;
   node *tail;
   double_list() : sizee(0), head(nullptr), tail(nullptr) {}
@@ -191,10 +191,16 @@ public:
     }
 
     const_iterator &operator--() {
-      if (ptr == nullptr)
+      if (ptr == nullptr) {
+        if (dl == nullptr || dl->tail == nullptr) {
+          throw "invalid";
+        }
+        ptr = dl->tail;
+        return *this;
+      }
+      if (ptr == dl->head) {
         throw "invalid";
-      if (ptr == dl->head)
-        throw "invalid";
+      }
       ptr = ptr->prev;
       return *this;
     }
@@ -224,8 +230,8 @@ public:
     }
 
     const T *operator->() const noexcept {
-      if (ptr == nullptr)
-        throw "invalid";
+      // if (ptr == nullptr)
+      // throw "invalid";
       return &(ptr->val);
     }
 
@@ -300,10 +306,10 @@ public:
     return iterator(this, new_node);
   }
 
-  T front() { return head->val; }
-  const T cfront() const { return head->val; }
-  T back() { return tail->val; }
-  const T cback() const { return tail->val; }
+  T &front() { return head->val; }
+  const T &cfront() const { return head->val; }
+  T &back() { return tail->val; }
+  const T &cback() const { return tail->val; }
 
   /**
    * the following are operations of double list
@@ -350,6 +356,8 @@ public:
   }
 
   int size() { return sizee; }
+  int size() const { return sizee; }
+
   bool empty() const { return sizee == 0; }
   void clear() {
     node *current = head;
